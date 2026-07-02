@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { NavRail } from '@/components/layout/NavRail';
 import { atendimentosService } from '@/api/atendimentosService';
 import { useAtendimento, useFila, useTicketRecebido } from '@/hooks/useAtendimentos';
-import type { Handler, Message } from '@/types';
+import type { Handler, Message, TicketResumo } from '@/types';
 import { TicketCard } from './TicketCard';
 import { Conversa } from './Conversa';
 import { ContextoMotorista } from './ContextoMotorista';
@@ -16,6 +16,15 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'urgentes', label: 'Urgentes' },
   { key: 'aguardando', label: 'Aguardando' },
+];
+
+/** Respostas rápidas do atendente (templates). */
+const RESPOSTAS_RAPIDAS = [
+  'Olá! Aqui é da FBLog Atende. Como posso te ajudar?',
+  'Só um instante, já estou verificando isso no sistema.',
+  'Localizei seu protocolo, vou resolver agora mesmo.',
+  'Pode me enviar a foto do documento por aqui, por favor?',
+  'Prontinho! Posso ajudar em mais alguma coisa?',
 ];
 
 /** Respostas simuladas do motorista (mock de mensagens recebidas). */
@@ -38,43 +47,71 @@ function horaAgora(): string {
 export function AtendimentoPage() {
   const { fila } = useFila();
   const { ticket } = useTicketRecebido();
+  const [filaLocal, setFilaLocal] = useState<TicketResumo[]>([]);
   const [selecionado, setSelecionado] = useState('a-04812');
   const { atendimento } = useAtendimento(selecionado);
   const [filtro, setFiltro] = useState<Filtro>('todos');
-  const [responsavel, setResponsavel] = useState<Handler>('you');
 
-  // Mensagens da conversa em estado local (permite enviar/receber mockado).
-  const [mensagens, setMensagens] = useState<Message[]>([]);
+  // Quem responde por ticket (Você/IA), conversa por ticket e rascunho.
+  const [handlerPorId, setHandlerPorId] = useState<Record<string, Handler>>({});
+  const [threads, setThreads] = useState<Record<string, Message[]>>({});
   const [rascunho, setRascunho] = useState('');
-  const [digitando, setDigitando] = useState(false);
-  const respostaIdx = useRef(0);
+  const [digitandoId, setDigitandoId] = useState<string | null>(null);
+  const [menuRapidas, setMenuRapidas] = useState(false);
+  const [ticketVisivel, setTicketVisivel] = useState(true);
+  const [aviso, setAviso] = useState('');
 
-  // Recarrega as mensagens sempre que troca o atendimento selecionado.
+  const respostaIdx = useRef(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const timers = useRef<number[]>([]);
+
+  // Fila mockada -> estado local (permite encerrar/assumir/aceitar).
   useEffect(() => {
-    if (atendimento) setMensagens(atendimento.mensagens);
-  }, [atendimento?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (fila.length) setFilaLocal((prev) => (prev.length ? prev : fila));
+  }, [fila]);
+
+  // Semeia a conversa e o responsável ao abrir um atendimento ainda não visto.
+  useEffect(() => {
+    if (!atendimento) return;
+    setThreads((t) => (t[atendimento.id] ? t : { ...t, [atendimento.id]: atendimento.mensagens }));
+    setHandlerPorId((h) => (atendimento.id in h ? h : { ...h, [atendimento.id]: atendimento.responsavel }));
+  }, [atendimento]);
+
+  // Toast some sozinho; timers são limpos ao desmontar.
+  useEffect(() => {
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(''), 2600);
+    return () => clearTimeout(t);
+  }, [aviso]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
+  const responsavel: Handler = handlerPorId[selecionado] ?? atendimento?.responsavel ?? 'you';
+  const mensagens = threads[selecionado] ?? atendimento?.mensagens ?? [];
+
+  const adiciona = (id: string, msg: Message) =>
+    setThreads((t) => ({ ...t, [id]: [...(t[id] ?? []), msg] }));
+
+  const setResponsavel = (h: Handler) => setHandlerPorId((m) => ({ ...m, [selecionado]: h }));
 
   const filaFiltrada = useMemo(
     () =>
-      fila.filter((t) => {
+      filaLocal.filter((t) => {
         if (filtro === 'urgentes') return t.prioridade === 'bad' || t.sessaoStatus === 'bad';
         if (filtro === 'aguardando') return t.responsavel === 'ia';
         return true;
       }),
-    [fila, filtro],
+    [filaLocal, filtro],
   );
 
   /** Simula uma mensagem recebida do motorista. */
-  const receberMock = (texto?: string) => {
-    setDigitando(true);
-    window.setTimeout(() => {
-      const t = texto ?? RESPOSTAS_MOCK[respostaIdx.current++ % RESPOSTAS_MOCK.length];
-      setMensagens((prev) => [
-        ...prev,
-        { id: 'in-' + Date.now(), autor: 'in', hora: horaAgora(), texto: t },
-      ]);
-      setDigitando(false);
+  const receberMock = (id: string, texto?: string) => {
+    setDigitandoId(id);
+    const t = window.setTimeout(() => {
+      const msg = texto ?? RESPOSTAS_MOCK[respostaIdx.current++ % RESPOSTAS_MOCK.length];
+      adiciona(id, { id: 'in-' + Date.now(), autor: 'in', hora: horaAgora(), texto: msg });
+      setDigitandoId((cur) => (cur === id ? null : cur));
     }, 1400);
+    timers.current.push(t);
   };
 
   /** Envia a resposta (como Você ou como IA, conforme o toggle). */
@@ -82,13 +119,69 @@ export function AtendimentoPage() {
     const texto = rascunho.trim();
     if (!texto || !atendimento) return;
     const autor = responsavel === 'ia' ? 'ia' : 'out';
-    setMensagens((prev) => [
-      ...prev,
-      { id: 'out-' + Date.now(), autor, hora: horaAgora(), texto },
-    ]);
+    adiciona(selecionado, { id: 'out-' + Date.now(), autor, hora: horaAgora(), texto });
     setRascunho('');
-    atendimentosService.enviarMensagem(atendimento.id, texto);
-    receberMock(); // resposta automática do motorista (mock)
+    setMenuRapidas(false);
+    atendimentosService.enviarMensagem(selecionado, texto);
+    receberMock(selecionado); // resposta automática do motorista (mock)
+  };
+
+  const usarResposta = (texto: string) => {
+    setRascunho((r) => (r.trim() ? r.trimEnd() + ' ' + texto : texto));
+    setMenuRapidas(false);
+  };
+
+  const anexar = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    adiciona(selecionado, { id: 'file-' + Date.now(), autor: 'out', hora: horaAgora(), texto: `📎 ${file.name}` });
+    setAviso('Anexo enviado ao motorista');
+    receberMock(selecionado, 'Recebi o arquivo, obrigado!');
+    e.target.value = '';
+  };
+
+  const assumir = (id: string) => {
+    setHandlerPorId((m) => ({ ...m, [id]: 'you' }));
+    setFilaLocal((f) => f.map((t) => (t.id === id ? { ...t, responsavel: 'you' } : t)));
+    setSelecionado(id);
+    // Só insere o marcador se a conversa já foi carregada (evita perder o histórico semeado).
+    if (threads[id]) {
+      adiciona(id, { id: 'take-' + Date.now(), autor: 'take', texto: `Você assumiu o atendimento da IA · ${horaAgora()}` });
+    }
+    setAviso('Você assumiu o atendimento');
+  };
+
+  const encerrar = () => {
+    if (!atendimento) return;
+    const restantes = filaLocal.filter((t) => t.id !== selecionado);
+    atendimentosService.fecharAtendimento(selecionado);
+    setFilaLocal(restantes);
+    setSelecionado(restantes[0]?.id ?? '');
+    setAviso(`Atendimento ${atendimento.protocolo} encerrado ✓`);
+  };
+
+  const aceitarRecebido = () => {
+    if (!ticket) return;
+    const novo: TicketResumo = {
+      id: ticket.id,
+      protocolo: '#FB-2026-04833',
+      motoristaNome: ticket.nome,
+      assunto: ticket.assunto ?? 'Frete de retorno disponível?',
+      canal: ticket.canal,
+      veiculo: 'Volvo FH 460',
+      placa: ticket.placa ?? 'SGT-6P21',
+      tempo: 'agora',
+      sessaoRestante: '23h58',
+      sessaoStatus: 'ok',
+      prioridade: 'warn',
+      responsavel: 'you',
+      cor: ticket.cor,
+    };
+    setFilaLocal((f) => (f.some((t) => t.id === novo.id) ? f : [novo, ...f]));
+    setHandlerPorId((m) => ({ ...m, [novo.id]: 'you' }));
+    setSelecionado(novo.id);
+    setTicketVisivel(false);
+    setAviso('Ticket aceito — atendimento iniciado');
   };
 
   return (
@@ -116,7 +209,7 @@ export function AtendimentoPage() {
         </div>
 
         <div className="optA__qlist">
-          {ticket && (
+          {ticket && ticketVisivel && (
             <div className="optA__incoming">
               <Icon name="bolt" size={18} style={{ color: 'var(--accent-d)' }} />
               <div style={{ flex: 1 }}>
@@ -125,15 +218,11 @@ export function AtendimentoPage() {
                   {ticket.nome} · WhatsApp
                 </div>
               </div>
-              <button className="mini2" onClick={() => atendimentosService.assumirDaIa(ticket.id)}>
+              <button className="mini2" onClick={() => setTicketVisivel(false)}>
                 <Icon name="ai" size={13} />
                 Deixar com IA
               </button>
-              <button
-                className="btn btn--primary"
-                style={{ padding: '7px 13px' }}
-                onClick={() => atendimentosService.aceitarTicket(ticket.id)}
-              >
+              <button className="btn btn--primary" style={{ padding: '7px 13px' }} onClick={aceitarRecebido}>
                 Aceitar
               </button>
             </div>
@@ -141,7 +230,7 @@ export function AtendimentoPage() {
 
           {filaFiltrada.length === 0 && (
             <div className="optA__qempty">
-              <Icon name="check" size={20} style={{ color: 'var(--ink-3)' }} />
+              <Icon name="checks" size={22} style={{ color: 'var(--ok)' }} />
               Nenhum atendimento neste filtro.
             </div>
           )}
@@ -151,7 +240,7 @@ export function AtendimentoPage() {
               key={t.id}
               ticket={{ ...t, ativo: t.id === selecionado }}
               onSelect={setSelecionado}
-              onAssumir={(id) => atendimentosService.assumirDaIa(id)}
+              onAssumir={assumir}
             />
           ))}
         </div>
@@ -159,7 +248,7 @@ export function AtendimentoPage() {
 
       {/* Conversa */}
       <main className="optA__main">
-        {atendimento && (
+        {atendimento && selecionado ? (
           <>
             <header className="optA__chead">
               <Avatar nome={atendimento.motorista.nome} size={42} color={atendimento.motorista.cor} />
@@ -176,26 +265,20 @@ export function AtendimentoPage() {
               </div>
               <div className="optA__cactions">
                 <div className="htoggle" title="Quem responde este atendimento">
-                  <button
-                    className={responsavel === 'you' ? 'is-on' : ''}
-                    onClick={() => setResponsavel('you')}
-                  >
+                  <button className={responsavel === 'you' ? 'is-on' : ''} onClick={() => setResponsavel('you')}>
                     <Icon name="user" size={14} />
                     Você
                   </button>
-                  <button
-                    className={responsavel === 'ia' ? 'is-on' : ''}
-                    onClick={() => setResponsavel('ia')}
-                  >
+                  <button className={responsavel === 'ia' ? 'is-on' : ''} onClick={() => setResponsavel('ia')}>
                     <Icon name="ai" size={14} />
                     IA no automático
                   </button>
                 </div>
-                <button className="btn">
+                <button className="btn" onClick={() => setAviso('Transferência registrada (mock)')}>
                   <Icon name="user" size={15} />
                   Transferir
                 </button>
-                <button className="btn btn--ok">
+                <button className="btn btn--ok" onClick={encerrar}>
                   <Icon name="check" size={15} />
                   Fechar atendimento
                 </button>
@@ -207,12 +290,22 @@ export function AtendimentoPage() {
                 motoristaNome={atendimento.motorista.nome}
                 motoristaCor={atendimento.motorista.cor}
                 mensagens={mensagens}
-                digitando={digitando}
+                digitando={digitandoId === selecionado}
               />
               <ContextoMotorista atendimento={atendimento} />
             </div>
 
             <div className="optA__composer">
+              {menuRapidas && (
+                <div className="qr">
+                  <div className="qr__title">Respostas rápidas</div>
+                  {RESPOSTAS_RAPIDAS.map((r) => (
+                    <button key={r} className="qr__item" onClick={() => usarResposta(r)}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className={'optA__inputbar' + (responsavel === 'ia' ? ' is-ia' : '')}>
                 <span className="optA__sendtag">
                   <Icon name={responsavel === 'ia' ? 'ai' : 'user'} size={13} />
@@ -233,22 +326,27 @@ export function AtendimentoPage() {
                 />
               </div>
               <div className="optA__comp-actions">
-                <button className="btn">
+                <input ref={fileRef} type="file" hidden onChange={anexar} />
+                <button className="btn" onClick={() => fileRef.current?.click()}>
                   <Icon name="clip" size={15} />
                   Anexar
                 </button>
-                <button className="btn">
+                <button
+                  className={'btn' + (menuRapidas ? ' is-on' : '')}
+                  onClick={() => setMenuRapidas((v) => !v)}
+                >
                   <Icon name="doc" size={15} />
                   Resposta rápida
                 </button>
                 <button
                   className="btn"
                   title="Simular uma mensagem recebida do motorista"
-                  onClick={() => receberMock()}
+                  onClick={() => receberMock(selecionado)}
                 >
                   <Icon name="refresh" size={15} />
                   Simular recebida
                 </button>
+                <span className="optA__hint">Enter envia · Shift+Enter quebra linha</span>
                 <button
                   className="btn btn--primary"
                   style={{ marginLeft: 'auto' }}
@@ -261,8 +359,21 @@ export function AtendimentoPage() {
               </div>
             </div>
           </>
+        ) : (
+          <div className="optA__mainempty">
+            <Icon name="checks" size={30} style={{ color: 'var(--ok)' }} />
+            <h2>Tudo em dia!</h2>
+            <p>Você não tem atendimentos abertos. Novos tickets aparecem na fila à esquerda.</p>
+          </div>
         )}
       </main>
+
+      {aviso && (
+        <div className="toast">
+          <Icon name="check" size={15} />
+          {aviso}
+        </div>
+      )}
     </div>
   );
 }

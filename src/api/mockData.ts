@@ -15,6 +15,12 @@ import type {
 // (substituíveis por chamadas reais quando VITE_USE_MOCK=false)
 // ============================================================
 
+/** Hora atual no formato HH:MM (para mensagens recém-chegadas). */
+function agoraCurto(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 export const USUARIO_DEMO: Usuario = {
   id: 'u-1',
   nome: 'Mariana Costa',
@@ -184,6 +190,205 @@ export const ATENDIMENTO_ATIVO: Atendimento = {
     { titulo: 'Frete MG → SP · avaria na carga', sub: '#FB-04210 · 12/04 · Encerrado', encerrado: true },
     { titulo: 'Atualização de dados bancários', sub: '#FB-04102 · 30/03 · Encerrado', encerrado: true },
   ],
+};
+
+// ---- Atendimentos por ticket (cada motorista com sua própria conversa) ----
+
+const ATN_04809: Atendimento = {
+  id: 'a-04809',
+  protocolo: '#FB-2026-04809',
+  assunto: 'Atualização de documentos — CNH vencendo',
+  categoria: 'Cadastro / Documentos',
+  canal: 'whatsapp',
+  responsavel: 'ia',
+  sessaoRestante: '22h10',
+  sessaoStatus: 'ok',
+  prioridade: 'ok',
+  motorista: {
+    id: 'm-2',
+    nome: 'Beatriz Almeida',
+    veiculo: 'Scania R450',
+    placa: 'BTA-9J04',
+    cnh: '0391 8842 220',
+    categoria: 'E',
+    antt: '87654321',
+    validadeCnh: '09/2026',
+    cadastrado: false,
+    cor: 'rose',
+  },
+  mensagens: [
+    { id: 'b1', autor: 'in', hora: '09:14', texto: 'Oi, recebi um aviso que minha CNH está vencendo. Preciso atualizar aqui na FBLog?' },
+    { id: 'b2', autor: 'ia', hora: '09:14', texto: 'Olá, Beatriz! Sua CNH vence em 09/2026. Para seguir aceitando fretes sem bloqueio, envie a nova CNH assim que renovar. Posso te lembrar 30 dias antes?' },
+    { id: 'b3', autor: 'in', hora: '09:16', texto: 'Pode sim. Já marquei a renovação pro fim do mês.' },
+    { id: 'b4', autor: 'ia', hora: '09:16', texto: 'Perfeito! Deixei um lembrete no seu cadastro. Assim que tiver o documento novo, é só enviar a foto por aqui que eu atualizo.' },
+  ],
+  documentos: [
+    { id: 'bd1', nome: 'CNH atual', meta: 'JPG · vence 09/2026', tipo: 'cnh' },
+  ],
+  historico: [
+    { titulo: 'Cadastro de veículo', sub: '#FB-04471 · 20/05 · Encerrado', encerrado: true },
+    { titulo: 'Frete RJ → SP', sub: '#FB-04290 · 28/04 · Encerrado', encerrado: true },
+    { titulo: 'Primeiro cadastro na FBLog', sub: '#FB-03980 · 15/02 · Encerrado', encerrado: true },
+  ],
+};
+
+const ATN_04790: Atendimento = {
+  id: 'a-04790',
+  protocolo: '#FB-2026-04790',
+  assunto: 'Carga não localizada no app de rastreio',
+  categoria: 'Rastreio / Operação',
+  canal: 'telefone',
+  responsavel: 'you',
+  sessaoRestante: '02h18',
+  sessaoStatus: 'bad',
+  prioridade: 'bad',
+  motorista: {
+    id: 'm-3',
+    nome: 'Lucas Ferreira',
+    veiculo: 'Mercedes Actros',
+    placa: 'LCF-7C55',
+    cnh: '0552 1190 447',
+    categoria: 'E',
+    antt: '44556677',
+    validadeCnh: '03/2028',
+    cadastrado: true,
+    cor: 'amber',
+  },
+  mensagens: [
+    { id: 'l1', autor: 'in', hora: '07:41', texto: 'Bom dia! A carga que peguei em Anápolis não aparece no app de rastreio. Tô parado esperando confirmação.' },
+    { id: 'l2', autor: 'ia', hora: '07:41', texto: 'Bom dia, Lucas! Localizei o frete #FB-2026-04790. O status está como "coleta pendente". Vou acionar um atendente para verificar com a operação.' },
+    { id: 'l3', autor: 'take', texto: 'Mariana assumiu o atendimento da IA · 07:43' },
+    { id: 'l4', autor: 'out', hora: '07:44', texto: 'Oi Lucas, aqui é a Mariana. Já pedi a baixa da coleta pro CD de Anápolis. Em até 10 min o rastreio deve atualizar. Fica na linha que te confirmo.' },
+    { id: 'l5', autor: 'in', hora: '07:52', texto: 'Agora apareceu aqui! Já consigo seguir viagem.' },
+  ],
+  documentos: [
+    { id: 'ld1', nome: 'Ordem de coleta', meta: 'PDF · enviado 07:44', tipo: 'outro' },
+  ],
+  historico: [
+    { titulo: 'Carga não localizada', sub: '#FB-04409 · 11/05 · Encerrado', encerrado: true },
+    { titulo: 'Pagamento pendente', sub: '#FB-04201 · 22/04 · Encerrado', encerrado: true },
+    { titulo: 'Frete GO → DF', sub: '#FB-04050 · 30/03 · Encerrado', encerrado: true },
+    { titulo: 'Atualização de dados', sub: '#FB-03870 · 10/02 · Encerrado', encerrado: true },
+  ],
+};
+
+const ATN_04751: Atendimento = {
+  id: 'a-04751',
+  protocolo: '#FB-2026-04751',
+  assunto: 'Dúvida sobre pagamento do frete de Goiânia',
+  categoria: 'Frete / Pagamento',
+  canal: 'chat',
+  responsavel: 'ia',
+  sessaoRestante: '16h02',
+  sessaoStatus: 'ok',
+  prioridade: 'ok',
+  motorista: {
+    id: 'm-4',
+    nome: 'Patrícia Gomes',
+    veiculo: 'DAF XF',
+    placa: 'PTG-1A77',
+    cnh: '0714 5523 108',
+    categoria: 'D',
+    antt: '33221100',
+    validadeCnh: '11/2027',
+    cadastrado: true,
+    cor: 'violet',
+  },
+  mensagens: [
+    { id: 'p1', autor: 'in', hora: '10:02', texto: 'Oi! O frete de Goiânia foi entregue ontem mas ainda não caiu o pagamento. Quando recebo?' },
+    { id: 'p2', autor: 'ia', hora: '10:02', texto: 'Olá, Patrícia! O pagamento do frete #FB-2026-04751 está programado para D+1 após a confirmação de entrega. A baixa foi registrada às 18h32 de ontem, então o crédito cai hoje até 18h.' },
+    { id: 'p3', autor: 'in', hora: '10:03', texto: 'Ah, entendi! E é na mesma conta cadastrada?' },
+    { id: 'p4', autor: 'ia', hora: '10:03', texto: 'Sim, na conta terminada em ••4471. Se precisar alterar, consigo abrir a atualização de dados bancários pra você.' },
+  ],
+  documentos: [
+    { id: 'pd1', nome: 'Comprovante de entrega', meta: 'PDF · enviado ontem 18:32', tipo: 'outro' },
+  ],
+  historico: [
+    { titulo: 'Pagamento frete Goiânia', sub: '#FB-04772 · 01/07 · Encerrado', encerrado: true },
+    { titulo: 'Frete SP → GO', sub: '#FB-04520 · 15/05 · Encerrado', encerrado: true },
+    { titulo: 'Comprovante de entrega', sub: '#FB-04310 · 25/04 · Encerrado', encerrado: true },
+  ],
+};
+
+const ATN_04738: Atendimento = {
+  id: 'a-04738',
+  protocolo: '#FB-2026-04738',
+  assunto: 'Cadastro de ANTT desatualizado',
+  categoria: 'Cadastro / Documentos',
+  canal: 'whatsapp',
+  responsavel: 'ia',
+  sessaoRestante: '09h55',
+  sessaoStatus: 'warn',
+  prioridade: 'warn',
+  motorista: {
+    id: 'm-5',
+    nome: 'Eduardo Ramos',
+    veiculo: 'Iveco Hi-Way',
+    placa: 'EDR-4K23',
+    cnh: '0668 3391 552',
+    categoria: 'E',
+    antt: '99887766',
+    validadeCnh: '05/2029',
+    cadastrado: false,
+    cor: 'green',
+  },
+  mensagens: [
+    { id: 'e1', autor: 'in', hora: '08:20', texto: 'Tentei aceitar um frete e deu erro dizendo que meu RNTRC/ANTT está desatualizado.' },
+    { id: 'e2', autor: 'ia', hora: '08:20', texto: 'Olá, Eduardo! De fato, seu RNTRC consta como vencido na base da ANTT. Para liberar os fretes, preciso que você envie o comprovante de regularização atualizado.' },
+    { id: 'e3', autor: 'in', hora: '08:22', texto: 'Acabei de regularizar no site da ANTT. Mando o print?' },
+    { id: 'e4', autor: 'ia', hora: '08:22', texto: 'Pode mandar o print ou o PDF. Assim que eu validar, libero seu cadastro para aceitar fretes de novo.' },
+  ],
+  documentos: [
+    { id: 'ed1', nome: 'RNTRC — comprovante', meta: 'aguardando envio', tipo: 'outro' },
+  ],
+  historico: [
+    { titulo: 'Cadastro de ANTT', sub: '#FB-04751 · 30/06 · Encerrado', encerrado: true },
+    { titulo: 'Frete PR → SP', sub: '#FB-04480 · 12/05 · Encerrado', encerrado: true },
+    { titulo: 'Primeiro cadastro na FBLog', sub: '#FB-04150 · 20/03 · Encerrado', encerrado: true },
+  ],
+};
+
+const ATN_NOVO: Atendimento = {
+  id: 't-novo',
+  protocolo: '#FB-2026-04833',
+  assunto: 'Frete de retorno disponível?',
+  categoria: 'Frete / Oferta',
+  canal: 'whatsapp',
+  responsavel: 'you',
+  sessaoRestante: '23h58',
+  sessaoStatus: 'ok',
+  prioridade: 'warn',
+  motorista: {
+    id: 'm-10',
+    nome: 'Sérgio Tavares',
+    veiculo: 'Volvo FH 460',
+    placa: 'SGT-6P21',
+    cnh: '0820 4471 336',
+    categoria: 'E',
+    antt: '55667788',
+    validadeCnh: '07/2028',
+    cadastrado: true,
+    cor: 'teal',
+  },
+  mensagens: [
+    { id: 's1', autor: 'in', hora: agoraCurto(), texto: 'Boa tarde! Acabei de descarregar em Porto Alegre. Tem algum frete de retorno pra região Sudeste?' },
+    { id: 's2', autor: 'ia', hora: agoraCurto(), texto: 'Boa tarde, Sérgio! Deixa eu verificar as ofertas de retorno disponíveis a partir de Porto Alegre. Um instante que já te passo as opções.' },
+  ],
+  documentos: [],
+  historico: [
+    { titulo: 'Frete de retorno', sub: '#FB-04612 · 18/06 · Encerrado', encerrado: true },
+    { titulo: 'Comprovante de entrega', sub: '#FB-04390 · 02/05 · Encerrado', encerrado: true },
+  ],
+};
+
+/** Conversa completa por id de ticket. */
+export const ATENDIMENTOS: Record<string, Atendimento> = {
+  'a-04812': ATENDIMENTO_ATIVO,
+  'a-04809': ATN_04809,
+  'a-04790': ATN_04790,
+  'a-04751': ATN_04751,
+  'a-04738': ATN_04738,
+  't-novo': ATN_NOVO,
 };
 
 export const DASHBOARD: DashboardData = {

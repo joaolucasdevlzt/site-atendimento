@@ -200,8 +200,41 @@ body { margin: 0; background: oklch(0.93 0.005 255); }
 .optA__input { flex: 1; border: none; outline: none; background: none; font-family: var(--font); font-size: 13.5px; color: var(--ink); resize: none; line-height: 1.5; max-height: 120px; padding: 4px 0; }
 .optA__input::placeholder { color: var(--ink-3); }
 .optA__comp-actions { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+.optA__composer { position: relative; }
+.optA__hint { font-size: 11px; color: var(--ink-3); margin-left: 4px; }
+.btn.is-on { border-color: var(--accent); background: var(--accent-sf); color: var(--accent-d); }
+
+/* menu de respostas rápidas */
+.qr {
+  position: absolute; left: 24px; right: 24px; bottom: calc(100% - 8px);
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: 12px;
+  box-shadow: var(--shadow-md); padding: 8px; z-index: 5;
+  display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto;
+}
+.qr__title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: 6px 10px 8px; }
+.qr__item {
+  text-align: left; font-family: var(--font); font-size: 13px; color: var(--ink); background: none; border: none;
+  padding: 9px 11px; border-radius: 8px; cursor: pointer; line-height: 1.4;
+}
+.qr__item:hover { background: var(--accent-sf); color: var(--accent-d); }
 
 .optA__qempty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 40px 20px; color: var(--ink-3); font-size: 13px; text-align: center; }
+
+/* estado vazio da conversa (sem atendimentos) */
+.optA__mainempty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 40px; }
+.optA__mainempty h2 { font-size: 19px; font-weight: 750; margin: 4px 0 0; letter-spacing: -0.02em; }
+.optA__mainempty p { font-size: 13.5px; color: var(--ink-3); margin: 0; max-width: 340px; }
+
+/* toast de confirmação */
+.toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 8px; z-index: 50;
+  background: var(--navy); color: #fff; font-size: 13px; font-weight: 600;
+  padding: 11px 18px; border-radius: 10px; box-shadow: var(--shadow-md);
+  animation: toastIn 0.2s ease-out;
+}
+.toast .icon { color: oklch(0.8 0.12 158); }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 .optA__side { width: 296px; flex: none; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; }
 .optA__sblock { padding: 18px 20px; border-bottom: 1px solid var(--border); }

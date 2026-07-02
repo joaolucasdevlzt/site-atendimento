@@ -1,6 +1,7 @@
 import { api, USE_MOCK, mockDelay } from './axiosInstance';
 import {
   ATENDIMENTO_ATIVO,
+  ATENDIMENTOS,
   FILA_ATENDIMENTOS,
   FILA_ESPERA,
   TICKET_RECEBIDO,
@@ -33,7 +34,7 @@ export const atendimentosService = {
   },
 
   async getAtendimento(id: string): Promise<Atendimento> {
-    if (USE_MOCK) return mockDelay(ATENDIMENTO_ATIVO);
+    if (USE_MOCK) return mockDelay(ATENDIMENTOS[id] ?? ATENDIMENTO_ATIVO);
     const { data } = await api.get<Atendimento>(`/atendimentos/${id}`);
     return data;
   },
