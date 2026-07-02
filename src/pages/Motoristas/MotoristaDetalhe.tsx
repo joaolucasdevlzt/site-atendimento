@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChannelTag } from '@/components/ui/ChannelTag';
 import { HandlerChip } from '@/components/ui/HandlerChip';
 import { Icon } from '@/components/ui/Icon';
+import { HistoricoConversaModal } from '@/components/atendimento/HistoricoConversaModal';
 import type { HistoricoAtendimento, MotoristaFrota, MotoristaStatus } from '@/types';
 
 const STATUS_META: Record<
@@ -44,6 +46,7 @@ export function MotoristaDetalhe({ motorista: m, atendimentos = [], onClose }: P
   const st = STATUS_META[m.status];
   const cnh = situacaoCnh(m.validadeCnh);
   const online = m.status !== 'offline';
+  const [conversa, setConversa] = useState<HistoricoAtendimento | null>(null);
 
   return (
     <div className="drawer" onClick={onClose}>
@@ -227,7 +230,7 @@ export function MotoristaDetalhe({ motorista: m, atendimentos = [], onClose }: P
             ) : (
               <div className="drawer__ats">
                 {atendimentos.map((a) => (
-                  <div className="drawer__at" key={a.id}>
+                  <div className="drawer__at drawer__at--click" key={a.id} onClick={() => setConversa(a)}>
                     <div className="drawer__atline" />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="drawer__attop">
@@ -241,6 +244,7 @@ export function MotoristaDetalhe({ motorista: m, atendimentos = [], onClose }: P
                         <span className="drawer__atdate">{a.dataLabel}</span>
                       </div>
                     </div>
+                    <Icon name="arrow" size={15} style={{ color: 'var(--ink-3)', flex: 'none' }} />
                   </div>
                 ))}
               </div>
@@ -248,6 +252,10 @@ export function MotoristaDetalhe({ motorista: m, atendimentos = [], onClose }: P
           </section>
         </div>
       </aside>
+
+      {conversa && (
+        <HistoricoConversaModal atendimento={conversa} onClose={() => setConversa(null)} />
+      )}
     </div>
   );
 }

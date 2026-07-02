@@ -4,7 +4,9 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ChannelTag } from '@/components/ui/ChannelTag';
 import { Icon } from '@/components/ui/Icon';
 import { HandlerChip } from '@/components/ui/HandlerChip';
+import { HistoricoConversaModal } from '@/components/atendimento/HistoricoConversaModal';
 import { useHistorico } from '@/hooks/useHistorico';
+import type { HistoricoAtendimento } from '@/types';
 
 type Periodo = 'hoje' | 'semana' | 'mes' | 'tudo';
 
@@ -28,6 +30,7 @@ export function HistoricoPage() {
   const { historico, loading } = useHistorico();
   const [periodo, setPeriodo] = useState<Periodo>('mes');
   const [busca, setBusca] = useState('');
+  const [conversa, setConversa] = useState<HistoricoAtendimento | null>(null);
 
   const hojeMes = new Date().toISOString().slice(0, 7); // YYYY-MM
 
@@ -97,7 +100,7 @@ export function HistoricoPage() {
           </thead>
           <tbody>
             {filtrados.map((h) => (
-              <tr key={h.id}>
+              <tr key={h.id} className="historico__row" onClick={() => setConversa(h)}>
                 <td>
                   <div className="optB__cust">
                     <Avatar nome={h.motoristaNome} size={32} color={h.cor} />
@@ -137,6 +140,10 @@ export function HistoricoPage() {
           </div>
         )}
       </div>
+
+      {conversa && (
+        <HistoricoConversaModal atendimento={conversa} onClose={() => setConversa(null)} />
+      )}
     </AppShell>
   );
 }
