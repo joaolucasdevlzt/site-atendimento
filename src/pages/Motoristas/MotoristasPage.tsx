@@ -3,6 +3,7 @@ import { AppShell, StatCard } from '@/components/layout/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/Icon';
 import { useMotoristas } from '@/hooks/useMotoristas';
+import { useHistorico } from '@/hooks/useHistorico';
 import type { MotoristaFrota, MotoristaStatus } from '@/types';
 import { MotoristaDetalhe } from './MotoristaDetalhe';
 
@@ -31,6 +32,7 @@ const FILTROS: { key: Filtro; label: string }[] = [
 /** Frota de motoristas — visão de gestão (status, frete atual, localização). */
 export function MotoristasPage() {
   const { motoristas, loading } = useMotoristas();
+  const { historico } = useHistorico();
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [busca, setBusca] = useState('');
   const [detalhe, setDetalhe] = useState<MotoristaFrota | null>(null);
@@ -109,7 +111,9 @@ export function MotoristasPage() {
                 <tr key={m.id} className="motoristas__rowclick" onClick={() => setDetalhe(m)}>
                   <td>
                     <div className="optB__cust">
-                      <Avatar nome={m.nome} size={34} color={m.cor} />
+                      <span className={'presence' + (m.status !== 'offline' ? ' is-on' : '')}>
+                        <Avatar nome={m.nome} size={34} color={m.cor} />
+                      </span>
                       <div>
                         <div className="nm">
                           {m.nome}
@@ -184,7 +188,13 @@ export function MotoristasPage() {
         )}
       </div>
 
-      {detalhe && <MotoristaDetalhe motorista={detalhe} onClose={() => setDetalhe(null)} />}
+      {detalhe && (
+        <MotoristaDetalhe
+          motorista={detalhe}
+          atendimentos={historico.filter((h) => h.motoristaNome === detalhe.nome)}
+          onClose={() => setDetalhe(null)}
+        />
+      )}
     </AppShell>
   );
 }

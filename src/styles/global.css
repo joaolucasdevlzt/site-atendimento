@@ -664,6 +664,28 @@ body { margin: 0; background: oklch(0.93 0.005 255); }
 .drawer__fdata { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
 .drawer__fvalor { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--ink); flex: none; }
 
+/* histórico de atendimentos do motorista */
+.drawer__empty { font-size: 12.5px; color: var(--ink-3); padding: 12px 2px; }
+.drawer__ats { display: flex; flex-direction: column; }
+.drawer__at { display: flex; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--border); }
+.drawer__at:last-child { border-bottom: none; }
+.drawer__atline { width: 3px; border-radius: 3px; background: var(--accent-sf); flex: none; }
+.drawer__attop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.drawer__atsubj { font-size: 13px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drawer__atmeta { display: flex; align-items: center; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+.drawer__atmeta .mono { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.drawer__atdate { font-size: 11px; color: var(--ink-3); }
+
+/* indicador de presença (online/offline) sobre o avatar */
+.presence { position: relative; display: inline-flex; flex: none; }
+.presence::after {
+  content: ""; position: absolute; right: -1px; bottom: -1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ink-3); border: 2px solid var(--surface);
+}
+.presence.is-on::after { background: var(--ok); }
+.presence--lg::after { width: 15px; height: 15px; border-width: 3px; right: 0; bottom: 2px; }
+
 @media (max-width: 560px) {
   .drawer__grid { grid-template-columns: 1fr; }
   .drawer__stats { grid-template-columns: 1fr; }

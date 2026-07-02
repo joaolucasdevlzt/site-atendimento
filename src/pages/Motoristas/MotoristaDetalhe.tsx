@@ -1,6 +1,8 @@
 import { Avatar } from '@/components/ui/Avatar';
+import { ChannelTag } from '@/components/ui/ChannelTag';
+import { HandlerChip } from '@/components/ui/HandlerChip';
 import { Icon } from '@/components/ui/Icon';
-import type { MotoristaFrota, MotoristaStatus } from '@/types';
+import type { HistoricoAtendimento, MotoristaFrota, MotoristaStatus } from '@/types';
 
 const STATUS_META: Record<
   MotoristaStatus,
@@ -33,13 +35,15 @@ function situacaoCnh(validade: string): { texto: string; tom: 'ok' | 'warn' | 'b
 
 interface Props {
   motorista: MotoristaFrota;
+  atendimentos?: HistoricoAtendimento[];
   onClose: () => void;
 }
 
 /** Painel deslizante com a visão completa de um motorista. */
-export function MotoristaDetalhe({ motorista: m, onClose }: Props) {
+export function MotoristaDetalhe({ motorista: m, atendimentos = [], onClose }: Props) {
   const st = STATUS_META[m.status];
   const cnh = situacaoCnh(m.validadeCnh);
+  const online = m.status !== 'offline';
 
   return (
     <div className="drawer" onClick={onClose}>
@@ -50,13 +54,19 @@ export function MotoristaDetalhe({ motorista: m, onClose }: Props) {
             <Icon name="close" size={18} />
           </button>
           <div className="drawer__hero">
-            <Avatar nome={m.nome} size={64} color={m.cor} />
+            <span className={'presence presence--lg' + (online ? ' is-on' : '')}>
+              <Avatar nome={m.nome} size={64} color={m.cor} />
+            </span>
             <div style={{ minWidth: 0 }}>
               <div className="drawer__name">
                 {m.nome}
                 {!m.cadastroCompleto && <span className="dot-warn" title="Cadastro incompleto" />}
               </div>
               <div className="drawer__badges">
+                <span className={'badge badge--' + (online ? 'ok' : 'mut')}>
+                  <span className="dot" style={{ background: online ? 'var(--ok)' : 'var(--ink-3)' }} />
+                  {online ? 'Online' : 'Offline'}
+                </span>
                 <span className={'badge badge--' + st.badge}>{st.label}</span>
                 {m.avaliacao != null && (
                   <span className="drawer__rate">
@@ -202,6 +212,39 @@ export function MotoristaDetalhe({ motorista: m, onClose }: Props) {
                 );
               })}
             </div>
+          </section>
+
+          {/* Histórico de atendimentos */}
+          <section className="drawer__sec">
+            <div className="drawer__slabel">
+              <Icon name="inbox" size={14} /> Histórico de atendimentos
+              <span className="optA__hcount" style={{ marginLeft: 'auto' }}>
+                {atendimentos.length}
+              </span>
+            </div>
+            {atendimentos.length === 0 ? (
+              <div className="drawer__empty">Nenhum atendimento registrado para este motorista.</div>
+            ) : (
+              <div className="drawer__ats">
+                {atendimentos.map((a) => (
+                  <div className="drawer__at" key={a.id}>
+                    <div className="drawer__atline" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="drawer__attop">
+                        <span className="drawer__atsubj">{a.assunto}</span>
+                        <span className={'badge badge--' + a.conversaoStatus}>{a.conversao}</span>
+                      </div>
+                      <div className="drawer__atmeta">
+                        <span className="mono">{a.protocolo}</span>
+                        <ChannelTag canal={a.canal} />
+                        <HandlerChip responsavel={a.resolvidoPor} size={12} />
+                        <span className="drawer__atdate">{a.dataLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </aside>
