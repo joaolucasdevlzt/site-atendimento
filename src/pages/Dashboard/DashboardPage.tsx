@@ -43,7 +43,7 @@ export function DashboardPage() {
 
   return (
     <AppShell
-      active="Desemp."
+      active="Painel"
       title="Dashboard do atendente"
       subtitle={`${usuario?.nome ?? 'Atendente'} · desempenho de hoje · 5 sessões ainda abertas`}
       actions={statusToggle}

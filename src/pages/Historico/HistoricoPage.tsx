@@ -56,7 +56,7 @@ export function HistoricoPage() {
 
   return (
     <AppShell
-      active="Histór."
+      active="Histórico"
       title="Histórico de atendimentos"
       subtitle="Atendimentos finalizados"
       search

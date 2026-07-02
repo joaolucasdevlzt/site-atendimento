@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { Atendimento } from '@/types';
 
@@ -7,9 +8,14 @@ const DOC_ICON = {
   outro: { name: 'doc' as const, bg: 'var(--surface-3)', fg: 'var(--ink-2)' },
 };
 
+const PASSO_HISTORICO = 3;
+
 /** Painel lateral direito: contexto do motorista, documentos e histórico. */
 export function ContextoMotorista({ atendimento }: { atendimento: Atendimento }) {
   const { motorista, documentos, historico } = atendimento;
+  const [visiveis, setVisiveis] = useState(2);
+  const lista = historico.slice(0, visiveis);
+  const restantes = historico.length - visiveis;
 
   return (
     <aside className="optA__side">
@@ -86,12 +92,15 @@ export function ContextoMotorista({ atendimento }: { atendimento: Atendimento })
       </div>
 
       <div className="optA__sblock">
-        <div className="optA__slabel">Protocolos anteriores</div>
-        {historico.map((h, i) => (
+        <div className="optA__slabel">
+          Protocolos anteriores
+          <span className="optA__hcount">{historico.length}</span>
+        </div>
+        {lista.map((h, i) => (
           <div className="optA__hist" key={i}>
             <div className="ln">
-              <span className="dot" style={i === historico.length - 1 ? { background: 'var(--border-2)' } : undefined} />
-              {i < historico.length - 1 && <span className="bar" />}
+              <span className="dot" style={i === lista.length - 1 && restantes <= 0 ? { background: 'var(--border-2)' } : undefined} />
+              {(i < lista.length - 1 || restantes > 0) && <span className="bar" />}
             </div>
             <div>
               <div className="ht">{h.titulo}</div>
@@ -99,6 +108,22 @@ export function ContextoMotorista({ atendimento }: { atendimento: Atendimento })
             </div>
           </div>
         ))}
+
+        {restantes > 0 ? (
+          <button
+            className="optA__hmore"
+            onClick={() => setVisiveis((v) => v + PASSO_HISTORICO)}
+          >
+            <Icon name="history" size={14} />
+            Carregar mais histórico ({restantes})
+          </button>
+        ) : (
+          historico.length > 2 && (
+            <button className="optA__hmore is-ghost" onClick={() => setVisiveis(2)}>
+              Recolher histórico
+            </button>
+          )
+        )}
       </div>
     </aside>
   );

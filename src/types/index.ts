@@ -190,6 +190,15 @@ export interface FreteAtual {
   eta: string;
 }
 
+/** Frete concluído/registrado no histórico do motorista. */
+export interface FreteHistorico {
+  id: string;
+  rota: string;
+  data: string;
+  valor: string;
+  status: 'entregue' | 'em_curso' | 'cancelado';
+}
+
 /** Motorista da frota (visão de gestão). */
 export interface MotoristaFrota {
   id: string;
@@ -200,11 +209,20 @@ export interface MotoristaFrota {
   categoria: string;
   status: MotoristaStatus;
   telefone: string;
+  email?: string;
+  cidadeBase?: string;
   localizacao: string;
   ultimaAtividade: string;
   cadastroCompleto: boolean;
   fretesMes: number;
+  // Documentação
+  cnh: string;
+  validadeCnh: string;
+  antt: string;
+  desde?: string;
+  avaliacao?: number; // 0-5
   frete?: FreteAtual;
+  fretesHistorico: FreteHistorico[];
 }
 
 // ---- Histórico de atendimentos -------------------------------------------

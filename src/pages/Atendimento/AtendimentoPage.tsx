@@ -1,16 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChannelTag } from '@/components/ui/ChannelTag';
 import { Icon } from '@/components/ui/Icon';
 import { NavRail } from '@/components/layout/NavRail';
 import { atendimentosService } from '@/api/atendimentosService';
 import { useAtendimento, useFila, useTicketRecebido } from '@/hooks/useAtendimentos';
-import type { Handler } from '@/types';
+import type { Handler, Message } from '@/types';
 import { TicketCard } from './TicketCard';
 import { Conversa } from './Conversa';
 import { ContextoMotorista } from './ContextoMotorista';
 
 type Filtro = 'todos' | 'urgentes' | 'aguardando';
+
+const FILTROS: { key: Filtro; label: string }[] = [
+  { key: 'todos', label: 'Todos' },
+  { key: 'urgentes', label: 'Urgentes' },
+  { key: 'aguardando', label: 'Aguardando' },
+];
+
+/** Respostas simuladas do motorista (mock de mensagens recebidas). */
+const RESPOSTAS_MOCK = [
+  'Perfeito, muito obrigado pela ajuda! 👍',
+  'Entendi. Vou conferir aqui e já te retorno.',
+  'Show, anotei a placa e o número do protocolo.',
+  'Beleza, pode deixar. Fico no aguardo do comprovante.',
+  'Combinado! Qualquer coisa eu chamo por aqui mesmo.',
+  'Ok, acabei de enviar a foto do documento.',
+];
+
+/** Hora atual no formato HH:MM. */
+function horaAgora(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 /** Tela principal — Console de atendimentos ativos (3 colunas). */
 export function AtendimentoPage() {
@@ -21,6 +43,54 @@ export function AtendimentoPage() {
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [responsavel, setResponsavel] = useState<Handler>('you');
 
+  // Mensagens da conversa em estado local (permite enviar/receber mockado).
+  const [mensagens, setMensagens] = useState<Message[]>([]);
+  const [rascunho, setRascunho] = useState('');
+  const [digitando, setDigitando] = useState(false);
+  const respostaIdx = useRef(0);
+
+  // Recarrega as mensagens sempre que troca o atendimento selecionado.
+  useEffect(() => {
+    if (atendimento) setMensagens(atendimento.mensagens);
+  }, [atendimento?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filaFiltrada = useMemo(
+    () =>
+      fila.filter((t) => {
+        if (filtro === 'urgentes') return t.prioridade === 'bad' || t.sessaoStatus === 'bad';
+        if (filtro === 'aguardando') return t.responsavel === 'ia';
+        return true;
+      }),
+    [fila, filtro],
+  );
+
+  /** Simula uma mensagem recebida do motorista. */
+  const receberMock = (texto?: string) => {
+    setDigitando(true);
+    window.setTimeout(() => {
+      const t = texto ?? RESPOSTAS_MOCK[respostaIdx.current++ % RESPOSTAS_MOCK.length];
+      setMensagens((prev) => [
+        ...prev,
+        { id: 'in-' + Date.now(), autor: 'in', hora: horaAgora(), texto: t },
+      ]);
+      setDigitando(false);
+    }, 1400);
+  };
+
+  /** Envia a resposta (como Você ou como IA, conforme o toggle). */
+  const enviar = () => {
+    const texto = rascunho.trim();
+    if (!texto || !atendimento) return;
+    const autor = responsavel === 'ia' ? 'ia' : 'out';
+    setMensagens((prev) => [
+      ...prev,
+      { id: 'out-' + Date.now(), autor, hora: horaAgora(), texto },
+    ]);
+    setRascunho('');
+    atendimentosService.enviarMensagem(atendimento.id, texto);
+    receberMock(); // resposta automática do motorista (mock)
+  };
+
   return (
     <div className="ab optA">
       <NavRail active="Atender" />
@@ -29,17 +99,17 @@ export function AtendimentoPage() {
       <section className="optA__queue">
         <div className="optA__qhead">
           <div className="optA__qtitle">
-            Atendimentos ativos <span className="optA__qcount">{fila.length}</span>
+            Atendimentos ativos <span className="optA__qcount">{filaFiltrada.length}</span>
           </div>
           <div className="optA__qsub">Atribuídos a você · sessões abertas (24h)</div>
           <div className="optA__filters">
-            {(['todos', 'urgentes', 'aguardando'] as Filtro[]).map((f) => (
+            {FILTROS.map((f) => (
               <span
-                key={f}
-                className={'optA__filter' + (filtro === f ? ' is-active' : '')}
-                onClick={() => setFiltro(f)}
+                key={f.key}
+                className={'optA__filter' + (filtro === f.key ? ' is-active' : '')}
+                onClick={() => setFiltro(f.key)}
               >
-                {f === 'todos' ? 'Todos' : f === 'urgentes' ? 'Urgentes' : 'Aguardando'}
+                {f.label}
               </span>
             ))}
           </div>
@@ -69,7 +139,14 @@ export function AtendimentoPage() {
             </div>
           )}
 
-          {fila.map((t) => (
+          {filaFiltrada.length === 0 && (
+            <div className="optA__qempty">
+              <Icon name="check" size={20} style={{ color: 'var(--ink-3)' }} />
+              Nenhum atendimento neste filtro.
+            </div>
+          )}
+
+          {filaFiltrada.map((t) => (
             <TicketCard
               key={t.id}
               ticket={{ ...t, ativo: t.id === selecionado }}
@@ -129,14 +206,31 @@ export function AtendimentoPage() {
               <Conversa
                 motoristaNome={atendimento.motorista.nome}
                 motoristaCor={atendimento.motorista.cor}
-                mensagens={atendimento.mensagens}
+                mensagens={mensagens}
+                digitando={digitando}
               />
               <ContextoMotorista atendimento={atendimento} />
             </div>
 
             <div className="optA__composer">
-              <div className="optA__inputbar">
-                Digite sua resposta para {atendimento.motorista.nome.split(' ')[0]}…
+              <div className={'optA__inputbar' + (responsavel === 'ia' ? ' is-ia' : '')}>
+                <span className="optA__sendtag">
+                  <Icon name={responsavel === 'ia' ? 'ai' : 'user'} size={13} />
+                  {responsavel === 'ia' ? 'Enviar como IA' : 'Enviar como você'}
+                </span>
+                <textarea
+                  className="optA__input"
+                  rows={1}
+                  value={rascunho}
+                  placeholder={`Digite sua resposta para ${atendimento.motorista.nome.split(' ')[0]}…`}
+                  onChange={(e) => setRascunho(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      enviar();
+                    }
+                  }}
+                />
               </div>
               <div className="optA__comp-actions">
                 <button className="btn">
@@ -147,7 +241,20 @@ export function AtendimentoPage() {
                   <Icon name="doc" size={15} />
                   Resposta rápida
                 </button>
-                <button className="btn btn--primary" style={{ marginLeft: 'auto' }}>
+                <button
+                  className="btn"
+                  title="Simular uma mensagem recebida do motorista"
+                  onClick={() => receberMock()}
+                >
+                  <Icon name="refresh" size={15} />
+                  Simular recebida
+                </button>
+                <button
+                  className="btn btn--primary"
+                  style={{ marginLeft: 'auto' }}
+                  onClick={enviar}
+                  disabled={!rascunho.trim()}
+                >
                   <Icon name="send" size={15} />
                   Enviar resposta
                 </button>

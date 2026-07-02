@@ -3,7 +3,8 @@ import { AppShell, StatCard } from '@/components/layout/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/Icon';
 import { useMotoristas } from '@/hooks/useMotoristas';
-import type { MotoristaStatus } from '@/types';
+import type { MotoristaFrota, MotoristaStatus } from '@/types';
+import { MotoristaDetalhe } from './MotoristaDetalhe';
 
 const STATUS_META: Record<
   MotoristaStatus,
@@ -32,6 +33,7 @@ export function MotoristasPage() {
   const { motoristas, loading } = useMotoristas();
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [busca, setBusca] = useState('');
+  const [detalhe, setDetalhe] = useState<MotoristaFrota | null>(null);
 
   const contagem = useMemo(() => {
     const c: Record<MotoristaStatus, number> = {
@@ -60,7 +62,7 @@ export function MotoristasPage() {
 
   return (
     <AppShell
-      active="Motor."
+      active="Motoristas"
       title="Motoristas"
       subtitle={`${motoristas.length} motoristas na frota · ${contagem.disponivel} disponíveis para carregar`}
       search
@@ -104,7 +106,7 @@ export function MotoristasPage() {
             {filtrados.map((m) => {
               const st = STATUS_META[m.status];
               return (
-                <tr key={m.id}>
+                <tr key={m.id} className="motoristas__rowclick" onClick={() => setDetalhe(m)}>
                   <td>
                     <div className="optB__cust">
                       <Avatar nome={m.nome} size={34} color={m.cor} />
@@ -148,9 +150,28 @@ export function MotoristasPage() {
                   <td style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>{m.localizacao}</td>
                   <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>{m.ultimaAtividade}</td>
                   <td>
-                    <button className="btn" style={{ padding: '6px 11px' }} title={`Ligar para ${m.telefone}`}>
-                      <Icon name="phone" size={14} />
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <a
+                        className="btn"
+                        style={{ padding: '6px 11px' }}
+                        href={`tel:${m.telefone.replace(/\D/g, '')}`}
+                        title={`Ligar para ${m.telefone}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Icon name="phone" size={14} />
+                      </a>
+                      <button
+                        className="btn"
+                        style={{ padding: '6px 11px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetalhe(m);
+                        }}
+                      >
+                        Ver
+                        <Icon name="arrow" size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -162,6 +183,8 @@ export function MotoristasPage() {
           <div className="app__empty">Nenhum motorista neste filtro.</div>
         )}
       </div>
+
+      {detalhe && <MotoristaDetalhe motorista={detalhe} onClose={() => setDetalhe(null)} />}
     </AppShell>
   );
 }

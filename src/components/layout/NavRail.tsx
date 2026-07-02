@@ -12,10 +12,9 @@ interface NavItem {
 
 const ITEMS: NavItem[] = [
   { icon: 'inbox', label: 'Atender', to: '/atendimento' },
-  { icon: 'list', label: 'Fila', to: '/fila' },
-  { icon: 'truck', label: 'Motor.', to: '/motoristas' },
-  { icon: 'history', label: 'Histór.', to: '/historico' },
-  { icon: 'chart', label: 'Desemp.', to: '/dashboard' },
+  { icon: 'truck', label: 'Motoristas', to: '/motoristas' },
+  { icon: 'history', label: 'Histórico', to: '/historico' },
+  { icon: 'chart', label: 'Painel', to: '/dashboard' },
 ];
 
 /** Barra de navegação lateral (rail) do console de atendimento. */
